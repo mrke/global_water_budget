@@ -27,7 +27,7 @@ spatial<-"c:/global climate/" # place where climate input files are kept
   soilmoist<-0 #
   SoilMoist <- 0 # fractional soil moisture (decimal %)
   SoilMoist_Init <- rep(0.2,10) # fractional soil moisture (decimal %)
-  runmoist<-1 # run soil moisture model (0=no, 1=yes)?
+  runmoist<-0 # run soil moisture model (0=no, 1=yes)?
   #  soil moisture parameters found in Table 9.1 in Campbell and Norman, 1995 (Environmental Biophysics)
   soiltype<-11
   CampNormTbl9_1<-read.csv('../micro_global/CampNormTbl9_1.csv')
@@ -132,18 +132,18 @@ ABSMIN<-0.866 # decimal %, maximum solar absorptivity
 ptcond<-0.15 # decimal % of surface contacting the substrate
 
 # physiological traits
-TMAXPR<-35.5 # degrees C, voluntary thermal maximum (upper body temperature for foraging and also burrow depth selection) # Licht 1966 thermal gradient
-TMINPR<-12.15 # degrees C, voluntary thermal minimum (lower body temperature for foraging) # Kearney Obs (PhD field trip)
-TBASK<-TMINPR#5 # degrees C, minimum basking temperature (14. deg C, Fraser 1985 thesis, min of A in Fig. 7.3)
-TEMERGE<-9.2 # degrees C, temperature at which animal will move to a basking site
-ctmax<-38.6  # degrees C, critical thermal maximum (animal will die if ctkill = 1 and this threshold is exceeded)
-ctmin<-10 # degrees C, critical thermal minimum (used by program to determine depth selected when inactive and burrowing)
-TPREF<-31.4 # preferred body temperature (animal will attempt to regulate as close to this value as possible) (mean 31.9, range 29.4-34.3, Bennett, A.F. & John-Alder, H. (1986) Thermal Relations of Some Australian Skinks (Sauria: Scincidae). Copeia, 1986, 57-64.), mode in Pamula Fig. 3.14 around 33.5
-skinwet<-0.229 # %, percentage of total surface area acting like a free water surface for evaporation 
+TMAXPR<-43 # degrees C, voluntary thermal maximum (upper body temperature for foraging and also burrow depth selection) # Licht 1966 thermal gradient
+TMINPR<-30 # degrees C, voluntary thermal minimum (lower body temperature for foraging) # Kearney Obs (PhD field trip)
+TBASK<-20#5 # degrees C, minimum basking temperature (14. deg C, Fraser 1985 thesis, min of A in Fig. 7.3)
+TEMERGE<-10 # degrees C, temperature at which animal will move to a basking site
+ctmax<-45  # degrees C, critical thermal maximum (animal will die if ctkill = 1 and this threshold is exceeded)
+ctmin<-5 # degrees C, critical thermal minimum (used by program to determine depth selected when inactive and burrowing)
+TPREF<-39 # preferred body temperature (animal will attempt to regulate as close to this value as possible) (mean 31.9, range 29.4-34.3, Bennett, A.F. & John-Alder, H. (1986) Thermal Relations of Some Australian Skinks (Sauria: Scincidae). Copeia, 1986, 57-64.), mode in Pamula Fig. 3.14 around 33.5
+skinwet<-0.1 # %, percentage of total surface area acting like a free water surface for evaporation 
 
 # behavioural traits
-dayact<-1 # diurnal activity allowed (1) or not (0)?
-nocturn<-0 # nocturnal activity allowed (1) or not (0)?
+dayact<-0 # diurnal activity allowed (1) or not (0)?
+nocturn<-1 # nocturnal activity allowed (1) or not (0)?
 crepus<-0 # crepuscular activity allowed (1) or not (0)?
 burrow<-1 # shelter in burrow allowed (1) or not (0)?
 shdburrow<-0 # choose if the animal's retreat is in the shade (1) or in the open (0)
@@ -213,7 +213,7 @@ with(environ, points(DEP/10~dates,type = "l",col="brown"))
 abline(TMAXPR,0,lty=2,col='red')
 abline(TMINPR,0,lty=2,col='blue')
 
-with(masbal,plot(H2OCut_g~dates,type = "l",col="blue"))
+with(masbal,plot(H2OCut_g~dates,ylim=c(-0.01,0.006),type = "l",col="blue"))
 with(masbal,points(H2OResp_g~dates,type = "l",col="red"))
 
 forage<-subset(environ,ACT==2)
