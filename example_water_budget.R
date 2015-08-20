@@ -16,7 +16,7 @@ spatial<-"c:/global climate/" # place where climate input files are kept
   RUF <- 0.004 # Roughness height (m), , e.g. sand is 0.05, grass may be 2.0, current allowed range: 0.001 (snow) - 2.0 cm.
   SLE <- 0.96 # Substrate longwave IR emissivity (decimal %), typically close to 1
   ERR <- 2.0 # Integrator error for soil temperature calculations
-  DEP <- c(0., 1,  5.,  10.,  15.,  20.,  30.,  50.,  100.,  200.) # Soil nodes (cm) - keep spacing close near the surface, last value is where it is assumed that the soil temperature is at the annual mean air temperature
+  DEP <- c(0., 2.5,  5.,  10.,  15.,  20.,  30.,  50.,  100.,  200.) # Soil nodes (cm) - keep spacing close near the surface, last value is where it is assumed that the soil temperature is at the annual mean air temperature
   Thcond <- 2.5 # soil minerals thermal conductivity (W/mC)
   Density <- 2560. # soil minerals density (kg/m3)
   SpecHeat <- 870. # soil minerals specific heat (J/kg-K)
@@ -76,44 +76,46 @@ source('NicheMapR_Setup_micro.R')
 nicheout<-NicheMapR(niche)
 setwd(curdir)
 
-
-
 # get output
-metout<-as.data.frame(nicheout$metout[1:(timeinterval*24*nyears),]) # above ground microclimatic conditions, min shade
-shadmet<-as.data.frame(nicheout$shadmet[1:(timeinterval*24*nyears),]) # above ground microclimatic conditions, max shade
-soil<-as.data.frame(nicheout$soil[1:(timeinterval*24*nyears),]) # soil temperatures, minimum shade
- shadsoil<-as.data.frame(nicheout$shadsoil[1:(timeinterval*24*nyears),]) # soil temperatures, maximum shade
-soilmoist<-as.data.frame(nicheout$soilmoist[1:(timeinterval*24*nyears),]) # soil water content, minimum shade
-shadmoist<-as.data.frame(nicheout$shadmoist[1:(timeinterval*24*nyears),]) # soil water content, maximum shade
-humid<-as.data.frame(nicheout$humid[1:(timeinterval*24*nyears),]) # soil humidity, minimum shade
-shadhumid<-as.data.frame(nicheout$shadhumid[1:(timeinterval*24*nyears),]) # soil humidity, maximum shade
-soilpot<-as.data.frame(nicheout$soilpot[1:(timeinterval*24*nyears),]) # soil water potential, minimum shade
-shadpot<-as.data.frame(nicheout$shadpot[1:(timeinterval*24*nyears),]) # soil water potential, maximum shade
-rainfall<-as.data.frame(nicheout$RAINFALL)
-MAXSHADES<-as.data.frame(nicheout$MAXSHADES)
+dim<-nicheout$dim
+metout<-as.matrix(nicheout$metout[1:(dim*24),]) # above ground microclimatic conditions, min shade
+shadmet<-as.matrix(nicheout$shadmet[1:(dim*24),]) # above ground microclimatic conditions, max shade
+soil<-as.matrix(nicheout$soil[1:(dim*24),]) # soil temperatures, minimum shade
+shadsoil<-as.matrix(nicheout$shadsoil[1:(dim*24),]) # soil temperatures, maximum shade
+soilmoist<-as.matrix(nicheout$soilmoist[1:(dim*24),]) # soil water content, minimum shade
+shadmoist<-as.matrix(nicheout$shadmoist[1:(dim*24),]) # soil water content, maximum shade
+humid<-as.matrix(nicheout$humid[1:(dim*24),]) # soil humidity, minimum shade
+shadhumid<-as.matrix(nicheout$shadhumid[1:(dim*24),]) # soil humidity, maximum shade
+soilpot<-as.matrix(nicheout$soilpot[1:(dim*24),]) # soil water potential, minimum shade
+shadpot<-as.matrix(nicheout$shadpot[1:(dim*24),]) # soil water potential, maximum shade
+rainfall<-as.matrix(nicheout$RAINFALL)
+MAXSHADES<-as.matrix(nicheout$MAXSHADES)
 elev<-as.numeric(nicheout$ALTT)
 REFL<-as.numeric(nicheout$REFL)
 longlat<-as.matrix(nicheout$longlat)
-ectoin<-rbind(elev,REFL,longlat,fieldcap,wilting,1990,1990+nyears-1)
+ectoin<-as.matrix(rbind(elev,REFL,longlat,0,0,1990,1990+nyears-1))
+wetlandTemps=matrix(data = 0., nrow = 24*dim, ncol = 1)
+wetlandDepths=matrix(data = 0., nrow = 24*dim, ncol = 1)
 RAINFALL<-rainfall
 
-# write output to csv files for possibly reading in by ectotherm model
-write.csv(metout,'metout.csv')
-write.csv(shadmet,'shadmet.csv')
-write.csv(soil,'soil.csv')
-write.csv(shadsoil,'shadsoil.csv')
-write.csv(soilmoist,'soilmoist.csv')
-write.csv(shadmoist,'shadmoist.csv')
-write.csv(humid,'humid.csv')
-write.csv(shadhumid,'shadhumid.csv')
-write.csv(soilpot,'soilpot.csv')
-write.csv(shadpot,'shadpot.csv')
-write.csv(rainfall,'rainfall.csv')
-write.csv(ectoin,'ectoin.csv')
-write.csv(DEP,'DEP.csv')
-write.csv(MAXSHADES,'MAXSHADES.csv')
+# 
+# # write output to csv files for possibly reading in by ectotherm model
+# write.csv(metout,'metout.csv')
+# write.csv(shadmet,'shadmet.csv')
+# write.csv(soil,'soil.csv')
+# write.csv(shadsoil,'shadsoil.csv')
+# write.csv(soilmoist,'soilmoist.csv')
+# write.csv(shadmoist,'shadmoist.csv')
+# write.csv(humid,'humid.csv')
+# write.csv(shadhumid,'shadhumid.csv')
+# write.csv(soilpot,'soilpot.csv')
+# write.csv(shadpot,'shadpot.csv')
+# write.csv(rainfall,'rainfall.csv')
+# write.csv(ectoin,'ectoin.csv')
+# write.csv(DEP,'DEP.csv')
+# write.csv(MAXSHADES,'MAXSHADES.csv')
 
-microin<-"../global_water_budget/" # directory where the microclimate model outputs are (empty if in present directory)
+microin<-"none" # directory where the microclimate model outputs are (empty if in present directory)
 
 # simulation settings
 mac<-0 # choose mac (1) or pc (0) 
