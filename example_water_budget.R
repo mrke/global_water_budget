@@ -64,7 +64,7 @@ spatial<-"c:/global climate/" # place where climate input files are kept
   snowmelt<-1. # proportion of calculated snowmelt that doesn't refreeze
   undercatch<-1. # undercatch multipier for converting rainfall to snow
   rainmelt<-0.016 # paramter in equation that melts snow with rainfall as a function of air temp
-  write_input<-1 # write csv files of final input to working directory? 1=yes, 0=no.
+  write_input<-0 # write csv files of final input to working directory? 1=yes, 0=no.
   basic<-0
   shore<-0
 
@@ -172,11 +172,11 @@ setwd(curdir)
 
 
 # retrieve output
-metout<-as.data.frame(read.table(file='metout.csv',sep=",",header=TRUE))[,-1]
-shadmet<-as.data.frame(read.table('shadmet.csv',sep=",",header=TRUE))[,-1]
-soil<-as.data.frame(read.table('soil.csv',sep=",",header=TRUE))[,-1]
-shadsoil<-as.data.frame(read.table('shadsoil.csv',sep=",",header=TRUE))[,-1]
-rainfall<-as.data.frame(nicheout$RAINFALL)
+metout<-as.data.frame(metout)
+shadmet<-as.data.frame(shadmet)
+soil<-as.data.frame(soil)
+shadsoil<-as.data.frame(shadsoil)
+rainfall<-as.data.frame(rainfall)
 nyears<-nicheout$nyears
 environ<-as.data.frame(nicheout$environ[1:(timeinterval*24*nyears),])
 enbal<-as.data.frame(nicheout$enbal[1:(timeinterval*24*nyears),])
