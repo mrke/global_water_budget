@@ -215,7 +215,7 @@ with(environ, points(DEP/10~dates,type = "l",col="brown"))
 abline(TMAXPR,0,lty=2,col='red')
 abline(TMINPR,0,lty=2,col='blue')
 
-with(masbal,plot(H2OCut_g~dates,ylim=c(-0.01,0.006),type = "l",col="blue"))
+with(masbal,plot(H2OCut_g~dates,ylim=c(0,0.006),type = "l",col="blue"))
 with(masbal,points(H2OResp_g~dates,type = "l",col="red"))
 
 forage<-subset(environ,ACT==2)
