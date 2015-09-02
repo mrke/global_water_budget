@@ -1,77 +1,75 @@
-spatial<-"c:/global climate/" # place where climate input files are kept
+
+######################### model modes ###########################################################
+mac<-0 # choose mac (1) or pc (0) 
+writecsv<-0 # make Fortran code write output as csv files
+write_input<-0 # write csv files of final input to working directory? 1=yes, 0=no.
+runshade<-1 # run the model twice, once for each shade level (1) or just for the first shade level (0)?
+runmoist<-0 # run soil moisture model (0=no, 1=yes)?
+snowmodel<-0 # run the snow model (0=no, 1=yes)? - note that this runs slower
+basic<-0 # for use with a simplified demo script 
+shore<-0 # include tide effects (if 0, an empty matrix of tide effects is created)
+rungads<-1 # use the Global Aerosol Database?
+#########################################################################################################
 
 ############## location and climatic data  ###################################
-  mac<-0 # choose mac (1) or pc (0) 
-  sitemethod <- 1 # 0=specified single site long/lat, 1=place name search using geodis (needs internet)
-  longlat<-c(-113.81691,48.6941) # type a long/lat here in decimal degrees, used if option 0 is chosen above
-  loc <- "Nyrripi Northern Territory, Australia" # type in a location here, used if option 1 is chosen above
-  timezone<-0 # if timezone=1 (needs internet), uses GNtimezone function in package geonames to correct to local time zone (excluding daylight saving correction)
-  timeinterval<-12 # number of time intervals to generate predictions for over a year (must be 12 <= x <=365)
-  rungads<-1 # use the Global Aerosol Database?
-  snowmodel<-0 # run snow version? (slower!)
-  nyears<-1 # number of years to run
+spatial<-"c:/global climate/" # place where climate input files are kept
+sitemethod <- 1 # 0=specified single site long/lat, 1=place name search using geodis (needs internet)
+longlat<-c(-113.81691,48.6941) # type a long/lat here in decimal degrees, used if option 0 is chosen above
+loc <- "Nyrripi Northern Territory, Australia" # type in a location here, used if option 1 is chosen above
+timezone<-0 # if timezone=1 (needs internet), uses GNtimezone function in package geonames to correct to local time zone (excluding daylight saving correction)
+timeinterval<-12 # number of time intervals to generate predictions for over a year (must be 12 <= x <=365)
+nyears<-1 # number of years to run
+#########################################################################################################
 
 ############# microclimate model parameters ################################
-  EC <- 0.0167238 # Eccenricity of the earth's orbit (current value 0.0167238, ranges between 0.0034 to 0.058)
-  RUF <- 0.004 # Roughness height (m), , e.g. sand is 0.05, grass may be 2.0, current allowed range: 0.001 (snow) - 2.0 cm.
-  SLE <- 0.96 # Substrate longwave IR emissivity (decimal %), typically close to 1
-  ERR <- 2.0 # Integrator error for soil temperature calculations
-  DEP <- c(0., 2.5,  5.,  10.,  15.,  20.,  30.,  50.,  100.,  200.) # Soil nodes (cm) - keep spacing close near the surface, last value is where it is assumed that the soil temperature is at the annual mean air temperature
-  Thcond <- 2.5 # soil minerals thermal conductivity (W/mC)
-  Density <- 2560. # soil minerals density (kg/m3)
-  SpecHeat <- 870. # soil minerals specific heat (J/kg-K)
-  BulkDensity <- 1300. # soil bulk density (kg/m3)
-  cap<-0 # organic cap present on soil surface? (cap has lower conductivity - 0.2 W/mC - and higher specific heat 1920 J/kg-K)
-  SatWater <- 0.26 # volumetric water content at saturation (0.1 bar matric potential) (m3/m3)
-  Clay <- 20 # clay content for matric potential calculations (%)
-  soilmoist<-0 #
-  SoilMoist <- 0 # fractional soil moisture (decimal %)
-  SoilMoist_Init <- rep(0.2,10) # fractional soil moisture (decimal %)
-  runmoist<-0 # run soil moisture model (0=no, 1=yes)?
-  #  soil moisture parameters found in Table 9.1 in Campbell and Norman, 1995 (Environmental Biophysics)
-  soiltype<-11
-  CampNormTbl9_1<-read.csv('../micro_global/CampNormTbl9_1.csv')
-  fieldcap<-CampNormTbl9_1[soiltype,7] # field capacity, mm
-  wilting<-CampNormTbl9_1[soiltype,8]  # use value from digital atlas of Australian soils # wilting point, mm
-  PE<-rep(CampNormTbl9_1[soiltype,4],19) #air entry potential J/kg 
-  KS<-rep(CampNormTbl9_1[soiltype,6],19) #saturated conductivity, kg s/m3
-  BB<-rep(CampNormTbl9_1[soiltype,5],19) #soil 'b' parameter
-  BD<-rep(1.3,19) # soil bulk density, Mg/m3
-  L<-c(0,0,8.18990859,7.991299442,7.796891252,7.420411664,7.059944542,6.385001059,5.768074989,4.816673431,4.0121088,1.833554792,0.946862989,0.635260544,0.804575,0.43525621,0.366052856,0,0)*10000
-  LAI<-0.1 # leaf area index, used to partition traspiration/evaporation from PET
-  rainmult<-1 # rainfall multiplier to impose catchment
-  maxpool<-10000 # max depth for water pooling on the surface, mm (to account for runoff)
-  evenrain<-0 # spread daily rainfall evenly across 24hrs (1) or one event at midnight (2)
-  fieldcap<-30 # field capacity, mm
-  wilting<-9 # wilting point, mm
-  REFL<-0.10 # soil reflectance (decimal %)
-  evenrain<-0 # spread daily rainfall evenly across 24hrs (1) or one event at midnight (2)
-  maxpool<-200000#6 # max depth for water pooling on the surface, mm (to account for runoff)
-  slope<-0. # slope (degrees, range 0-90)
-  aspect<-180. # aspect (degrees, 0 = North, range 0-360)
-  hori<-rep(0,24) # enter the horizon angles (degrees) so that they go from 0 degrees azimuth (north) clockwise in 15 degree intervals
-  PCTWET<-0. # percentage of surface area acting as a free water surface (%)
-  CMH2O <- 1. # precipitable cm H2O in air column, 0.1 = VERY DRY; 1.0 = MOIST AIR CONDITIONS; 2.0 = HUMID, TROPICAL CONDITIONS (note this is for the whole atmospheric profile, not just near the ground)  
-  TIMAXS <- c(1.0, 1.0, 0.0, 0.0)   # Time of Maximums for Air Wind RelHum Cloud (h), air & Wind max's relative to solar noon, humidity and cloud cover max's relative to sunrise      														
-  TIMINS <- c(0.0, 0.0, 1.0, 1.0)   # Time of Minimums for Air Wind RelHum Cloud (h), air & Wind min's relative to sunrise, humidity and cloud cover min's relative to solar noon
-  minshade<-0. # minimum available shade (%)
-  maxshade<-90. # maximum available shade (%)
-  runshade<-1. # run the model twice, once for each shade level (1) or just for the first shade level (0)?
-  grasshade<-0 # this drives min shade value by the relative soil moisture multiplied by the maxshade parameter, above
-  Usrhyt <- 1# local height (cm) at which air temperature, relative humidity and wind speed calculatinos will be made 
-  snowtemp<-1.5 # temperature at which precipitation falls as snow (used for snow model)
-  snowdens<-0.4 # snow density (mg/m3)
-  snowmelt<-1. # proportion of calculated snowmelt that doesn't refreeze
-  undercatch<-1. # undercatch multipier for converting rainfall to snow
-  rainmelt<-0.016 # paramter in equation that melts snow with rainfall as a function of air temp
-  write_input<-0 # write csv files of final input to working directory? 1=yes, 0=no.
-  basic<-0
-  shore<-0
+EC <- 0.0167238 # Eccenricity of the earth's orbit (current value 0.0167238, ranges between 0.0034 to 0.058)
+RUF <- 0.004 # Roughness height (m), , e.g. sand is 0.05, grass may be 2.0, current allowed range: 0.001 (snow) - 2.0 cm.
+SLE <- 0.96 # Substrate longwave IR emissivity (decimal %), typically close to 1
+ERR <- 1.25 # Integrator error for soil temperature calculations
+DEP <- c(0., 2.5,  5.,  10.,  15.,  20.,  30.,  50.,  100.,  200.) # Soil nodes (cm) - keep spacing close near the surface, last value is where it is assumed that the soil temperature is at the annual mean air temperature
+Thcond <- 2.5 # soil minerals thermal conductivity (W/mC)
+Density <- 2560. # soil minerals density (kg/m3)
+SpecHeat <- 870. # soil minerals specific heat (J/kg-K)
+BulkDensity <- 1300. # soil bulk density (kg/m3)
+cap<-1 # organic cap present on soil surface? (cap has lower conductivity - 0.2 W/mC - and higher specific heat 1920 J/kg-K)
+Clay <- 20 # clay content for matric potential calculations (%)
+SoilMoist_Init <- rep(0.2,10) # fractional soil moisture (decimal %)
+#  soil moisture parameters found in Table 9.1 in Campbell and Norman, 1995 (Environmental Biophysics)
+soiltype<-11
+CampNormTbl9_1<-read.csv('../micro_global/CampNormTbl9_1.csv')
+fieldcap<-CampNormTbl9_1[soiltype,7] # field capacity, mm
+wilting<-CampNormTbl9_1[soiltype,8]  # use value from digital atlas of Australian soils # wilting point, mm
+PE<-rep(CampNormTbl9_1[soiltype,4],19) #air entry potential J/kg 
+KS<-rep(CampNormTbl9_1[soiltype,6],19) #saturated conductivity, kg s/m3
+BB<-rep(CampNormTbl9_1[soiltype,5],19) #soil 'b' parameter
+BD<-rep(1.3,19) # soil bulk density, Mg/m3
+L<-c(0,0,8.18990859,7.991299442,7.796891252,7.420411664,7.059944542,6.385001059,5.768074989,4.816673431,4.0121088,1.833554792,0.946862989,0.635260544,0.804575,0.43525621,0.366052856,0,0)*10000
+LAI<-0.1 # leaf area index, used to partition traspiration/evaporation from PET
+rainmult<-1 # rainfall multiplier to impose catchment
+maxpool<-10000 # max depth for water pooling on the surface, mm (to account for runoff)
+REFL<-0.10 # soil reflectance (decimal %)
+evenrain<-1 # spread daily rainfall evenly across 24hrs (1) or one event at midnight (2)
+maxpool<-200000#6 # max depth for water pooling on the surface, mm (to account for runoff)
+slope<-0. # slope (degrees, range 0-90)
+aspect<-180. # aspect (degrees, 0 = North, range 0-360)
+hori<-rep(0,24) # enter the horizon angles (degrees) so that they go from 0 degrees azimuth (north) clockwise in 15 degree intervals
+PCTWET<-0. # percentage of surface area acting as a free water surface (%)
+CMH2O <- 1. # precipitable cm H2O in air column, 0.1 = VERY DRY; 1.0 = MOIST AIR CONDITIONS; 2.0 = HUMID, TROPICAL CONDITIONS (note this is for the whole atmospheric profile, not just near the ground)  
+TIMAXS <- c(1.0, 1.0, 0.0, 0.0)   # Time of Maximums for Air Wind RelHum Cloud (h), air & Wind max's relative to solar noon, humidity and cloud cover max's relative to sunrise    															
+TIMINS <- c(0.0, 0.0, 1.0, 1.0)   # Time of Minimums for Air Wind RelHum Cloud (h), air & Wind min's relative to sunrise, humidity and cloud cover min's relative to solar noon
+minshade<-0. # minimum available shade (%)
+maxshade<-90. # maximum available shade (%)
+Usrhyt <- 1# local height (cm) at which air temperature, relative humidity and wind speed calculatinos will be made 
+snowtemp<-1.5 # temperature at which precipitation falls as snow (used for snow model)
+snowdens<-0.3 # snow density (mg/m3)
+snowmelt<-0.5 # proportion of calculated snowmelt that doesn't refreeze
+undercatch<-1. # undercatch multipier for converting rainfall to snow
+rainmelt<-0.0125# paramter in equation that melts snow with rainfall as a function of air temp
 
 # run the model
 curdir<-getwd()
 setwd('../micro_global/')
-niche<-list(basic=basic,shore=shore,L,LAI=LAI,SoilMoist=SoilMoist,evenrain=evenrain,runmoist=runmoist,maxpool=maxpool,PE=PE,KS=KS,BB=BB,BD=BD,loc=loc,timeinterval=timeinterval,nyears=nyears,RUF=RUF,SLE=SLE,ERR=ERR,DEP=DEP,Thcond=Thcond,Density=Density,SpecHeat=SpecHeat,BulkDensity=BulkDensity,Clay=Clay,SatWater=SatWater,SoilMoist=SoilMoist,CMH2O=CMH2O,TIMAXS=TIMAXS,TIMINS=TIMINS,minshade=minshade,maxshade=maxshade,Usrhyt=Usrhyt,REFL=REFL,slope=slope,aspect=aspect,hori=hori,rungads=rungads,cap=cap,write_input=write_input,spatial=spatial,snowmodel=snowmodel,snowtemp=snowtemp,snowdens=snowdens,snowmelt=snowmelt,undercatch=undercatch,rainmult=rainmult,rainmelt=rainmelt,runshade=runshade,mac=mac)
+niche<-list(writecsv=writecsv,basic=basic,shore=shore,L,LAI=LAI,evenrain=evenrain,runmoist=runmoist,maxpool=maxpool,PE=PE,KS=KS,BB=BB,BD=BD,loc=loc,timeinterval=timeinterval,nyears=nyears,RUF=RUF,SLE=SLE,ERR=ERR,DEP=DEP,Thcond=Thcond,Density=Density,SpecHeat=SpecHeat,BulkDensity=BulkDensity,Clay=Clay,CMH2O=CMH2O,TIMAXS=TIMAXS,TIMINS=TIMINS,minshade=minshade,maxshade=maxshade,Usrhyt=Usrhyt,REFL=REFL,slope=slope,aspect=aspect,hori=hori,rungads=rungads,cap=cap,write_input=write_input,spatial=spatial,snowmodel=snowmodel,snowtemp=snowtemp,snowdens=snowdens,snowmelt=snowmelt,undercatch=undercatch,rainmult=rainmult,rainmelt=rainmelt,runshade=runshade,mac=mac)
 source('NicheMapR_Setup_micro.R')
 nicheout<-NicheMapR(niche)
 setwd(curdir)
@@ -97,6 +95,7 @@ ectoin<-as.matrix(rbind(elev,REFL,longlat,0,0,1990,1990+nyears-1))
 wetlandTemps=matrix(data = 0., nrow = 24*dim, ncol = 1)
 wetlandDepths=matrix(data = 0., nrow = 24*dim, ncol = 1)
 RAINFALL<-rainfall
+
 
 # 
 # # write output to csv files for possibly reading in by ectotherm model
@@ -184,11 +183,11 @@ masbal<-as.data.frame(nicheout$masbal[1:(timeinterval*24*nyears),])
 
 # append dates
 if(timeinterval==365){
-tzone<-paste("Etc/GMT-",10,sep="") # doing it this way ignores daylight savings!
-dates<-seq(ISOdate(2014,1,1,tz=tzone)-3600*12, ISOdate((2014+nyears),1,1,tz=tzone)-3600*13, by="hours")
-dates<-subset(dates, format(dates, "%m/%d")!= "02/29") # remove leap years
-dates2<-seq(ISOdate(2014,1,1,tz=tzone)-3600*12, ISOdate((2014+nyears),1,1,tz=tzone)-3600*13, by="days") 
-dates2<-subset(dates2, format(dates2, "%m/%d")!= "02/29") # remove leap years
+  tzone<-paste("Etc/GMT-",10,sep="") # doing it this way ignores daylight savings!
+  dates<-seq(ISOdate(2014,1,1,tz=tzone)-3600*12, ISOdate((2014+nyears),1,1,tz=tzone)-3600*13, by="hours")
+  dates<-subset(dates, format(dates, "%m/%d")!= "02/29") # remove leap years
+  dates2<-seq(ISOdate(2014,1,1,tz=tzone)-3600*12, ISOdate((2014+nyears),1,1,tz=tzone)-3600*13, by="days") 
+  dates2<-subset(dates2, format(dates2, "%m/%d")!= "02/29") # remove leap years
 }else{
   dates<-environ$DAY+environ$TIME/24-1
   dates2<-seq(1,timeinterval,1)
