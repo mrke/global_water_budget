@@ -1,23 +1,108 @@
-library(raster)
+#clear all
+rm(list=ls(all=T))
+
+#First calculate your Pwet term based on actual water loss measurements (either whole body, or head/body compartments)
+#############################################################
+###Enter your experimental data: if unavailable, enter NA
+Et.reported<-  #ml/hr, Total water loss rate
+Ec.reported<-NA  #ml/hr, Cutaneous water loss rate
+Er.reported<-NA  #ml/hr, Respiratory water loss rate
+Rs.reported<-NA         #s/cm, skin resistance if already known
+Tb<-25                 #C, core body temperature
+Ts<-Tb+0.001            #C, skin surface temperature, if not known add 0.001 to Tb
+Ta <- Tb+0.002          #C, ambient air temperature, if not known add 0.002 to Tb
+RHex <- 100             #%, RH inside animal, assume 100%RH
+RHin <- 5              #%, RH of ambient air 
+mass<-             #g, body mass
+SA<-         #cm2, surface area of animal, in not known use below equation from Benedict
+#SA=10*mass^(2/3)
+VO2<-            #mlO2/h, Metabolic rate, if unknown use regression equation below (Anders Pough 85) 
+#Ms<-1                #Ms is 0 for standard MR and 1 for resting MR
+#VO2 <- 0.13*mass^0.8*10^(0.038 * Tb)*10^(0.14*Ms)
+oee <- 16             #%, Oxygen extraction coefficient, if not known assume 16%
+Vt <- NA              #ml/breath, Tidal volume
+Br <- NA              #breaths/hr, Breathing rate
+AP<-1013250           #air pressure in pa
+Cp <- 1.00484         #J/g/K, specific heat of air
+wind<-NA              #cm/s, not equal to flow rate, if only flow rate is known, can roughly estimate wind speed 
+cross.animal<-3.14*(2.28/2)^2 #cm2, ave cross sectional area of animal, I am using ave of head width/height as diameter
+cross.chamber<-3.14*(3.2/2)^2 #cm2, cross sectional area of chamber
+flow<-100/60            #cm3/sec, flow rate in chamber
+wind<-flow/(cross.chamber-cross.animal)
+SAeye<-2*3.14*(0/2)^2     #cm2, surface area of eye while measurement was made, i am assuming cunninghami's closed eyes in chamber
+eyecorrect<-0           #If compartment method used, was the eye excluded from the head compartment? Yes=1, no=0
+headcorrect<-1          #If compartment method used, was the skin on the head included in the head compartment corrected? Yes=1, no=0
+
+pwet=list(Et.reported=Et.reported,Ec.reported=Ec.reported,Er.reported=Er.reported,Rs.reported=Rs.reported,Tb=Tb,Ts=Ts,Ta=Ta,RHex=RHex,RHin=RHin,mass=mass,SA=SA,VO2=VO2,oee=oee,Vt=Vt,Br=Br,AP=AP,Cp=Cp,wind=wind,SAeye=SAeye)
+source('find_pwet_function.R')
+pwet_results<-find_pwet(pwet)
+pwet_results
+############################################################
+
+
+
+#Alternatively you can experiment with different values of skin resistance, surface area of eye, and proportion of time spent with open eyes
+############################################################
+Rs<-pwet_results[[5]]         #s/cm, skin resistance 
+SAeye<-2*3.14*(0.26/2)^2      #cm2, surface area of eye, I used ratio of eye to SVL from photo (0.024) with ave SVL of our adult lizards (109mm) to get eye diameter
+Popen<-1                    #proportion of active time spent with eyes open
+
+pwet=list(Et.reported=Et.reported,Ec.reported=Ec.reported,Er.reported=Er.reported,Tb=Tb,Ts=Ts,Ta=Ta,RHex=RHex,RHin=RHin,mass=mass,SA=SA,VO2=VO2,oee=oee,Vt=Vt,Br=Br,AP=AP,Cp=Cp,wind=wind,SAeye=SAeye)
+source('new_pwet_function.R')
+new_pwet_results<-new_pwet(pwet)
+new_pwet_results
+############################################################
+
+
+
+#Next start water budget model
+##############################################################
 spatial<-"c:/global climate/" # place where climate input files are kept
+global_climate<-brick(paste(spatial,"global_climate.nc", sep= ""))
+
+library(ggplot2)
+library(sp)
+library(maps)
+library(mapproj)
+library(rasterVis) # Note: requires ggplot2
+
+
+######################### model modes ###########################################################
+mac<-0 # choose mac (1) or pc (0) 
+writecsv<-0 # make Fortran code write output as csv files
+write_input<-0 # write csv files of final input to working directory? 1=yes, 0=no.
+runshade<-1 # run the model twice, once for each shade level (1) or just for the first shade level (0)?
+runmoist<-0 # run soil moisture model (0=no, 1=yes)?
+snowmodel<-0 # run the snow model (0=no, 1=yes)? - note that this runs slower
+basic<-0 # for use with a simplified demo script 
+shore<-0 # include tide effects (if 0, an empty matrix of tide effects is created)
+rungads<-1 # use the Global Aerosol Database?
+#########################################################################################################
 
 ############## location and climatic data  ###################################
-  mac<-0 # choose mac (1) or pc (0) 
-  sitemethod <- 0 # 0=specified single site long/lat, 1=place name search using geodis (needs internet)
-  longlat<-c(145.450089,-37.460459) # type a long/lat here in decimal degrees, used if option 0 is chosen above
-  #longlat<-c(129.41,-23.26) # type a long/lat here in decimal degrees, used if option 0 is chosen above
-  loc <- "Yulara, Australia" # type in a location here, used if option 1 is chosen above
-  timezone<-0 # if timezone=1 (needs internet), uses GNtimezone function in package geonames to correct to local time zone (excluding daylight saving correction)
-  timeinterval<-12 # number of time intervals to generate predictions for over a year (must be 12 <= x <=365)
-  rungads<-1 # use the Global Aerosol Database?
-  snowmodel<-0 # run snow version? (slower!)
-  nyears<-1 # number of years to run
+sitemethod <- 0 # 0=specified single site long/lat, 1=place name search using geodis (needs internet)
+#longlat<-c(130,-17) # type a long/lat here in decimal degrees, used if option 0 is chosen above
+longlat<-c(145,-18) # type a long/lat here in decimal degrees, used if option 0 is chosen above
+#longlat<-c(129.410201,-23.257636) # type a long/lat here in decimal degrees, used if option 0 is chosen above
+loc <- "Nyrripi Northern Territory, Australia" # type in a location here, used if option 1 is chosen above
+timezone<-0 # if timezone=1 (needs internet), uses GNtimezone function in package geonames to correct to local time zone (excluding daylight saving correction)
+timeinterval<-12 # number of time intervals to generate predictions for over a year (must be 12 <= x <=365)
+nyears<-1 # number of years to run
+#########################################################################################################
 
   
   #Graph of points:
   spatial<-"c:/global climate/"
   global_climate<-brick(paste(spatial,"global_climate.nc", sep= ""))
-  plot(global_climate[[1]],ylim=c(-44,-8),xlim=c(110,155))
+  
+  #FOR JAN
+  plot(global_climate[[37]],ylim=c(-44,-8),xlim=c(110,155))
+  #plot(mean(global_climate[[73]],global_climate[[85]]),ylim=c(-44,-8),xlim=c(110,155))
+  
+  #FOR JULY
+  #(global_climate[[43]],ylim=c(-44,-8),xlim=c(110,155))
+  #plot(mean(global_climate[[79]],global_climate[[91]]),ylim=c(-44,-8),xlim=c(110,155))
+  
   # RAINFALL <- CLIMATE[,1:12]
   #    WNMAXX <- CLIMATE[,13:24]
   #   WNMINN<-WNMAXX*0.1 # impose diurnal cycle
@@ -57,7 +142,7 @@ spatial<-"c:/global climate/" # place where climate input files are kept
   runmoist<-0 # run soil moisture model (0=no, 1=yes)?
   #  soil moisture parameters found in Table 9.1 in Campbell and Norman, 1995 (Environmental Biophysics)
   ####soiltype<-soils[w]
-  soiltype<-1
+  soiltype<-7
   CampNormTbl9_1<-read.csv('../micro_global/CampNormTbl9_1.csv')
   fieldcap<-CampNormTbl9_1[soiltype,7] # field capacity, mm
   wilting<-CampNormTbl9_1[soiltype,8]  # use value from digital atlas of Australian soils # wilting point, mm
@@ -95,6 +180,9 @@ spatial<-"c:/global climate/" # place where climate input files are kept
   write_input<-0 # write csv files of final input to working directory? 1=yes, 0=no.
   basic<-0
   shore<-0
+  ####I added from micro_global's microclimate test file
+  densfun<-c(0,0) # slope and intercept of linear model of snow density as a function of day of year - if it is c(0,0) then fixed density used
+  
 
 # run the model
 curdir<-getwd()
@@ -196,9 +284,11 @@ climb<-0 # climbing to seek cooler habitats allowed (1) or not (0)?
 # MR=MR1*M^MR2*10^(MR3*Tb) based on Eq. 2 from Andrews & Pough 1985. Physiol. Zool. 58:214-231
 ####amass<-masses[w] # g, mass of animal (used if the 'monthly' option is checked and DEB model is thus off)
 amass<-38 # g, mass of animal (used if the 'monthly' option is checked and DEB model is thus off)
-MR_1<-0.013
-MR_2<-0.8
-MR_3<-0.038
+
+####Constants from linear regression of my heating/cooling curve data
+MR_1<-10^-4.736
+MR_2<-1.185
+MR_3<-0.044
 
 #set up call to NicheMapR function
 setwd('../ectotherm/')
@@ -244,13 +334,22 @@ colnames(rainfall)<-c("dates","rainfall")
 library(lattice) # package used for 'xyplot'
 juldays<-c(15.,46.,74.,105.,135.,166.,196.,227.,258.,288.,319.,349.) # middle day of each month
 
-with(environ, plot(TC~dates,ylim=c(-20,70),type = "l"))
+with(environ, plot(TC~dates,ylim=c(-20,70),type = "l",xlim=c(0,1)))
 with(environ, points(ACT*5~dates,type = "l",col="orange"))
 with(environ, points(SHADE/10~dates,type = "l",col="green"))
 with(environ, points(DEP/10~dates,type = "l",col="brown"))
-#with(metout, points(TAREF~dates,type = "l",col="light blue"))
+with(metout, points(TAREF~dates,type = "l",col="light blue"))
 abline(TMAXPR,0,lty=2,col='red')
 abline(TMINPR,0,lty=2,col='blue')
+abline(TPREF,0,lty=2,col='green')
+with(environ, plot(TC~dates,ylim=c(-20,70),type = "l",xlim=c(6,7)))
+with(environ, points(ACT*5~dates,type = "l",col="orange"))
+with(environ, points(SHADE/10~dates,type = "l",col="green"))
+with(environ, points(DEP/10~dates,type = "l",col="brown"))
+with(metout, points(TAREF~dates,type = "l",col="light blue"))
+abline(TMAXPR,0,lty=2,col='red')
+abline(TMINPR,0,lty=2,col='blue')
+abline(TPREF,0,lty=2,col='green')
 
 with(masbal,plot(H2OCut_g~dates,ylim=c(0,max(masbal$H2OCut_g)),type = "l",col="blue"))
 with(masbal,points(H2OResp_g~dates,type = "l",col="red"))
@@ -263,3 +362,45 @@ with(night,plot(TIME/60~JULDAY,pch=15,cex=2,col='dark blue'))
 with(forage,points((TIME-1)~JULDAY,pch=15,cex=2,col='orange'))
 with(bask,points((TIME-1)~JULDAY,pch=15,cex=2,col='light blue'))
 
+# 
+# #####GRAPHS
+# #Graph of points:
+# 
+# #FOR JAN
+# #plot(global_climate[[37]],ylim=c(-44,-8),xlim=c(110,155))
+# #plot(mean(global_climate[[73]],global_climate[[85]]),ylim=c(-44,-8),xlim=c(110,155))
+# 
+# #FOR JULY
+# plot(global_climate[[43]],ylim=c(-44,-8),xlim=c(110,155))
+# #plot(mean(global_climate[[79]],global_climate[[91]]),ylim=c(-44,-8),xlim=c(110,155))
+# 
+# # RAINFALL <- CLIMATE[,1:12]
+# #    WNMAXX <- CLIMATE[,13:24]
+# #   WNMINN<-WNMAXX*0.1 # impose diurnal cycle
+# #  TMINN <- CLIMATE[,25:36]
+# #  TMAXX <- CLIMATE[,37:48]
+# # ALLMINTEMPS<-TMINN
+# #ALLMAXTEMPS<-TMAXX
+# # ALLTEMPS <- cbind(ALLMAXTEMPS,ALLMINTEMPS)
+# # CCMAXX <- 100-CLIMATE[,49:60]
+# # CCMINN<-CCMAXX
+# # RAINYDAYS <- CLIMATE[,61:72]
+# #  RHMINN <- CLIMATE[,73:84]
+# # RHMAXX <- CLIMATE[,85:96]
+# points(x=longlat[1],y=longlat[2],pch=19,col="green")
+# 
+# sum(masbal$H2OEvap_g[which(masbal$JULDAY==15)])/amass
+# sum(masbal$H2OEvap_g[which(masbal$JULDAY==196)])/amass
+# 
+# #points(x=sites[w,1],y=sites[w,2],pch=19,col="blue",cex=(JanEtsum_cunn[w]*100))
+# environ2<-environ
+# environ2$ACT[environ2$ACT==2]<-1
+# #act<-sum(environ2$ACT[which(environ2$JULDAY==15)])
+# #points(x=sites[w,1]+1.5,y=sites[w,2],pch=19,col="green",cex=act/10)
+# #points(x=sites[w,1]+1,y=sites[w,2]-1,pch=19,col="dark grey",cex=JanEtsum_cunn[w]/act*2000)
+# 
+# #FOR JULY
+# act<-sum(environ2$ACT[which(environ2$JULDAY==196)])
+# points(x=longlat[1],y=longlat[2]+0.5,pch=19,col="blue",cex=((sum(masbal$H2OEvap_g[which(masbal$JULDAY==196)])/amass)/act*250))
+# points(x=longlat[1]+0.5,y=longlat[2],pch=19,col="red",cex=(act/10))
+# 

@@ -194,10 +194,10 @@ climb<-0 # climbing to seek cooler habitats allowed (1) or not (0)?
 # Metabolic rate, MR (ml O2/h, STP) at a given body mass (g) and body temperature, Tb (deg C)
 # MR=MR1*M^MR2*10^(MR3*Tb) based on Eq. 2 from Andrews & Pough 1985. Physiol. Zool. 58:214-231
 ####amass<-masses[w] # g, mass of animal (used if the 'monthly' option is checked and DEB model is thus off)
-amass<-38 # g, mass of animal (used if the 'monthly' option is checked and DEB model is thus off)
-MR_1<-0.013
-MR_2<-0.8
-MR_3<-0.038
+amass<-526 # g, mass of animal (used if the 'monthly' option is checked and DEB model is thus off)
+MR_1<-10^-5.175
+MR_2<-1.217
+MR_3<-0.051
 
 #set up call to NicheMapR function
 setwd('../ectotherm/')

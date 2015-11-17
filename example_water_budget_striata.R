@@ -1,23 +1,105 @@
-library(raster)
+#clear all
+#rm(list=ls(all=T))
+
+with(masbal,plot((H2OEvap_g)~dates,ylim=c(0,0.2),xlim=c(0,1),type = "n",xlab="Total evap water loss (g/s)",ylab="Date and time"))
+
+
+s_oee<-c(9,16)
+s_Rs<-c(180,740)
+s_col<-c("red","blue")
+s_popen<-c(1,0)
+
+High<-NA
+Low<-NA
+
+for (s in 1:2)
+{
+  
+  
+#First calculate your Pwet term based on actual water loss measurements (either whole body, or head/body compartments)
+#############################################################
+###Enter your experimental data: if unavailable, enter NA
+Et.reported<-0.011  #ml/hr, Total water loss rate
+Ec.reported<-NA  #ml/hr, Cutaneous water loss rate
+Er.reported<-NA  #ml/hr, Respiratory water loss rate
+Rs.reported<-NA         #s/cm, skin resistance if already known
+Tb<-25                 #C, core body temperature
+Ts<-Tb+0.001            #C, skin surface temperature, if not known add 0.001 to Tb
+Ta <- Tb+0.002          #C, ambient air temperature, if not known add 0.002 to Tb
+RHex <- 100             #%, RH inside animal, assume 100%RH
+RHin <- 5              #%, RH of ambient air 
+mass<-26.7             #g, body mass
+SA<-89.39              #cm2, surface area of animal, in not known use below equation from Benedict
+#SA=10*mass^(2/3)
+VO2<-1.254            #mlO2/h, Metabolic rate, if unknown use regression equation below (Anders Pough 85) 
+#Ms<-1                #Ms is 0 for standard MR and 1 for resting MR
+#VO2 <- 0.13*mass^0.8*10^(0.038 * Tb)*10^(0.14*Ms)
+oee <- 16            #%, Oxygen extraction coefficient, if not known assume 16%
+#oee <- s_oee[s]             #%, Oxygen extraction coefficient, if not known assume 16%
+Vt <- NA              #ml/breath, Tidal volume
+Br <- NA              #breaths/hr, Breathing rate
+AP<-1013250           #air pressure in pa
+Cp <- 1.00484         #J/g/K, specific heat of air
+wind<-NA             #cm/s, not equal to flow rate, if only flow rate is known, can roughly estimate wind speed 
+cross.animal<-3.14*(1.62/2)^2 #cm2, ave cross sectional area of animal, I am using ave of head width/height as diameter
+cross.chamber<-3.14*(3.2/2)^2 #cm2, cross sectional area of chamber
+flow<-75/60            #cm3/sec, flow rate in chamber
+wind<-flow/(cross.chamber-cross.animal)
+SAeye<-2*3.14*(0/2)^2 #cm2, surface area of eye while measurement was made, i am assuming striata's closed eyes in chamber
+eyecorrect<-0           #If compartment method used, was the eye excluded from the head compartment? Yes=1, no=0
+headcorrect<-1          #If compartment method used, was the skin on the head included in the head compartment corrected? Yes=1, no=0
+
+pwet=list(Et.reported=Et.reported,Ec.reported=Ec.reported,Er.reported=Er.reported,Rs.reported=Rs.reported,Tb=Tb,Ts=Ts,Ta=Ta,RHex=RHex,RHin=RHin,mass=mass,SA=SA,VO2=VO2,oee=oee,Vt=Vt,Br=Br,AP=AP,Cp=Cp,wind=wind,SAeye=SAeye)
+source('find_pwet_function.R')
+pwet_results<-find_pwet(pwet)
+pwet_results
+
+skinwet<-pwet_results[[10]] # %, percentage of total surface area acting like a free water surface for evaporation 
+############################################################
+
+
+
+#Alternatively you can experiment with different values of skin resistance, surface area of eye, and proportion of time spent with open eyes
+############################################################
+Rs<-pwet_results[[5]]        #s/cm, skin resistance 
+#Rs<-s_Rs[s]        #s/cm, skin resistance 
+SAeye<-2*3.14*(0.342/2)^2      #cm2, surface area of eye, from Rob's manuscript it is 2.23cm2, seems too big so I used ratio of eye to SVL from photo (0.037) with ave SVL of our adult lizards (92.37mm) to get eye diameter
+Popen<-1                #proportion of active time spent with eyes open
+Popen<-s_popen[s]    
+#oee<-68
+
+pwet=list(Et.reported=Et.reported,Ec.reported=Ec.reported,Er.reported=Er.reported,Tb=Tb,Ts=Ts,Ta=Ta,RHex=RHex,RHin=RHin,mass=mass,SA=SA,VO2=VO2,oee=oee,Vt=Vt,Br=Br,AP=AP,Cp=Cp,wind=wind,SAeye=SAeye)
+source('new_pwet_function.R')
+new_pwet_results<-new_pwet(pwet)
+new_pwet_results
+skinwet<-new_pwet_results[[6]] # %, percentage of total surface area acting like a free water surface for evaporation 
+############################################################
+
+
+
+#Next start water budget model
+##############################################################
 spatial<-"c:/global climate/" # place where climate input files are kept
 
-############## location and climatic data  ###################################
-  mac<-0 # choose mac (1) or pc (0) 
-  sitemethod <- 0 # 0=specified single site long/lat, 1=place name search using geodis (needs internet)
-  longlat<-c(145.450089,-37.460459) # type a long/lat here in decimal degrees, used if option 0 is chosen above
-  #longlat<-c(129.410201,-23.257636) # type a long/lat here in decimal degrees, used if option 0 is chosen above
-  loc <- "Yulara, Australia" # type in a location here, used if option 1 is chosen above
-  timezone<-0 # if timezone=1 (needs internet), uses GNtimezone function in package geonames to correct to local time zone (excluding daylight saving correction)
-  timeinterval<-12 # number of time intervals to generate predictions for over a year (must be 12 <= x <=365)
-  rungads<-1 # use the Global Aerosol Database?
-  snowmodel<-0 # run snow version? (slower!)
-  nyears<-1 # number of years to run
+library(ggplot2)
+library(sp)
+library(maps)
+library(mapproj)
+library(rasterVis) # Note: requires ggplot2
 
-  
-  #Graph of points:
+
+#Graph of points:
   spatial<-"c:/global climate/"
-  global_climate<-brick(paste(spatial,"global_climate.nc", sep= ""))
-  plot(global_climate[[1]],ylim=c(-44,-8),xlim=c(110,155))
+#  global_climate<-brick(paste(spatial,"global_climate.nc", sep= ""))
+  
+  #FOR JAN
+#  plot(global_climate[[37]],ylim=c(-44,-8),xlim=c(110,155))
+  #plot(mean(global_climate[[73]],global_climate[[85]]),ylim=c(-44,-8),xlim=c(110,155))
+  
+  #FOR JULY
+  #(global_climate[[43]],ylim=c(-44,-8),xlim=c(110,155))
+  #plot(mean(global_climate[[79]],global_climate[[91]]),ylim=c(-44,-8),xlim=c(110,155))
+  
   # RAINFALL <- CLIMATE[,1:12]
   #    WNMAXX <- CLIMATE[,13:24]
   #   WNMINN<-WNMAXX*0.1 # impose diurnal cycle
@@ -31,14 +113,35 @@ spatial<-"c:/global climate/" # place where climate input files are kept
   # RAINYDAYS <- CLIMATE[,61:72]
   #  RHMINN <- CLIMATE[,73:84]
   # RHMAXX <- CLIMATE[,85:96]
-  points(x=longlat[1],y=longlat[2],pch=19,col="red")
   
+
+  ######################### model modes ###########################################################
+  mac<-0 # choose mac (1) or pc (0) 
+  writecsv<-0 # make Fortran code write output as csv files
+  write_input<-0 # write csv files of final input to working directory? 1=yes, 0=no.
+  runshade<-1 # run the model twice, once for each shade level (1) or just for the first shade level (0)?
+  runmoist<-0 # run soil moisture model (0=no, 1=yes)?
+  snowmodel<-0 # run the snow model (0=no, 1=yes)? - note that this runs slower
+  basic<-0 # for use with a simplified demo script 
+  shore<-0 # include tide effects (if 0, an empty matrix of tide effects is created)
+  rungads<-1 # use the Global Aerosol Database?
+  #########################################################################################################
   
-############# microclimate model parameters ################################
+  ############## location and climatic data  ###################################
+  sitemethod <- 0 # 0=specified single site long/lat, 1=place name search using geodis (needs internet)
+  longlat<-c(130,-21) # type a long/lat here in decimal degrees, used if option 0 is chosen above
+  loc <- "Nyrripi Northern Territory, Australia" # type in a location here, used if option 1 is chosen above
+  timezone<-0 # if timezone=1 (needs internet), uses GNtimezone function in package geonames to correct to local time zone (excluding daylight saving correction)
+  timeinterval<-12 # number of time intervals to generate predictions for over a year (must be 12 <= x <=365)
+  nyears<-1 # number of years to run
+  #########################################################################################################
+ # points(x=longlat[1],y=longlat[2],pch=19,col="red")
+  
+  ############# microclimate model parameters ################################
   EC <- 0.0167238 # Eccenricity of the earth's orbit (current value 0.0167238, ranges between 0.0034 to 0.058)
   RUF <- 0.004 # Roughness height (m), , e.g. sand is 0.05, grass may be 2.0, current allowed range: 0.001 (snow) - 2.0 cm.
   SLE <- 0.96 # Substrate longwave IR emissivity (decimal %), typically close to 1
-  ERR <- 2.0 # Integrator error for soil temperature calculations
+  ERR <-2.5 # Integrator error for soil temperature calculations
   DEP <- c(0., 2.5,  5.,  10.,  15.,  20.,  30.,  50.,  100.,  200.) # Soil nodes (cm) - keep spacing close near the surface, last value is where it is assumed that the soil temperature is at the annual mean air temperature
   ####Thcond <- rocks[1,w] # soil minerals thermal conductivity (W/mC) 
   ####Density <- rocks[2,w] # soil minerals density (kg/m3)
@@ -49,15 +152,12 @@ spatial<-"c:/global climate/" # place where climate input files are kept
   SpecHeat <- 870. # soil minerals specific heat (J/kg-K)
   BulkDensity <- 1300. # soil bulk density (kg/m3) 
   cap<-0 # organic cap present on soil surface? (cap has lower conductivity - 0.2 W/mC - and higher specific heat 1920 J/kg-K)
-  SatWater <- 0.26 # volumetric water content at saturation (0.1 bar matric potential) (m3/m3)
   Clay <- 20 # clay content for matric potential calculations (%)
-  soilmoist<-0 #
-  SoilMoist <- 0 # fractional soil moisture (decimal %)
+  SoilMoist<-0.2
   SoilMoist_Init <- rep(0.2,10) # fractional soil moisture (decimal %)
-  runmoist<-0 # run soil moisture model (0=no, 1=yes)?
   #  soil moisture parameters found in Table 9.1 in Campbell and Norman, 1995 (Environmental Biophysics)
   ####soiltype<-soils[w]
-  soiltype<-1
+  soiltype<-1 #sand
   CampNormTbl9_1<-read.csv('../micro_global/CampNormTbl9_1.csv')
   fieldcap<-CampNormTbl9_1[soiltype,7] # field capacity, mm
   wilting<-CampNormTbl9_1[soiltype,8]  # use value from digital atlas of Australian soils # wilting point, mm
@@ -70,10 +170,7 @@ spatial<-"c:/global climate/" # place where climate input files are kept
   rainmult<-1 # rainfall multiplier to impose catchment
   maxpool<-10000 # max depth for water pooling on the surface, mm (to account for runoff)
   evenrain<-0 # spread daily rainfall evenly across 24hrs (1) or one event at midnight (2)
-  fieldcap<-30 # field capacity, mm
-  wilting<-9 # wilting point, mm
   REFL<-0.10 # soil reflectance (decimal %)
-  evenrain<-0 # spread daily rainfall evenly across 24hrs (1) or one event at midnight (2)
   maxpool<-200000#6 # max depth for water pooling on the surface, mm (to account for runoff)
   slope<-0. # slope (degrees, range 0-90)
   aspect<-180. # aspect (degrees, 0 = North, range 0-360)
@@ -88,21 +185,20 @@ spatial<-"c:/global climate/" # place where climate input files are kept
   grasshade<-0 # this drives min shade value by the relative soil moisture multiplied by the maxshade parameter, above
   Usrhyt <- 1# local height (cm) at which air temperature, relative humidity and wind speed calculatinos will be made 
   snowtemp<-1.5 # temperature at which precipitation falls as snow (used for snow model)
-  snowdens<-0.4 # snow density (mg/m3)
-  snowmelt<-1. # proportion of calculated snowmelt that doesn't refreeze
+  snowdens<-0.3 # snow density (mg/m3)
+  snowmelt<-0.5 # proportion of calculated snowmelt that doesn't refreeze
   undercatch<-1. # undercatch multipier for converting rainfall to snow
-  rainmelt<-0.016 # paramter in equation that melts snow with rainfall as a function of air temp
-  write_input<-0 # write csv files of final input to working directory? 1=yes, 0=no.
-  basic<-0
-  shore<-0
-
-# run the model
-curdir<-getwd()
-setwd('../micro_global/')
-niche<-list(basic=basic,shore=shore,L,LAI=LAI,SoilMoist=SoilMoist,evenrain=evenrain,runmoist=runmoist,maxpool=maxpool,PE=PE,KS=KS,BB=BB,BD=BD,loc=loc,timeinterval=timeinterval,nyears=nyears,RUF=RUF,SLE=SLE,ERR=ERR,DEP=DEP,Thcond=Thcond,Density=Density,SpecHeat=SpecHeat,BulkDensity=BulkDensity,Clay=Clay,SatWater=SatWater,SoilMoist=SoilMoist,CMH2O=CMH2O,TIMAXS=TIMAXS,TIMINS=TIMINS,minshade=minshade,maxshade=maxshade,Usrhyt=Usrhyt,REFL=REFL,slope=slope,aspect=aspect,hori=hori,rungads=rungads,cap=cap,write_input=write_input,spatial=spatial,snowmodel=snowmodel,snowtemp=snowtemp,snowdens=snowdens,snowmelt=snowmelt,undercatch=undercatch,rainmult=rainmult,rainmelt=rainmelt,runshade=runshade,mac=mac)
-source('NicheMapR_Setup_micro.R')
-nicheout<-NicheMapR(niche)
-setwd(curdir)
+  rainmelt<-0.0125 # paramter in equation that melts snow with rainfall as a function of air temp
+  ####I added from micro_global's microclimate test file
+  densfun<-c(0,0) # slope and intercept of linear model of snow density as a function of day of year - if it is c(0,0) then fixed density used
+  
+  # run the model
+  curdir<-getwd()
+  setwd('../micro_global/')
+  niche<-list(SoilMoist=SoilMoist,writecsv=writecsv,basic=basic,shore=shore,L,LAI=LAI,evenrain=evenrain,runmoist=runmoist,maxpool=maxpool,PE=PE,KS=KS,BB=BB,BD=BD,loc=loc,timeinterval=timeinterval,nyears=nyears,RUF=RUF,SLE=SLE,ERR=ERR,DEP=DEP,Thcond=Thcond,Density=Density,SpecHeat=SpecHeat,BulkDensity=BulkDensity,Clay=Clay,CMH2O=CMH2O,TIMAXS=TIMAXS,TIMINS=TIMINS,minshade=minshade,maxshade=maxshade,Usrhyt=Usrhyt,REFL=REFL,slope=slope,aspect=aspect,hori=hori,rungads=rungads,cap=cap,write_input=write_input,spatial=spatial,snowmodel=snowmodel,snowtemp=snowtemp,snowdens=snowdens,snowmelt=snowmelt,undercatch=undercatch,rainmult=rainmult,rainmelt=rainmelt,runshade=runshade,mac=mac)
+  source('NicheMapR_Setup_micro.R')
+  nicheout<-NicheMapR(niche)
+  setwd(curdir)
 
 # get output
 dim<-nicheout$dim
@@ -177,16 +273,15 @@ ctmax<-42.5  # degrees C, critical thermal maximum (animal will die if ctkill = 
 ctmin<-8.8 # degrees C, critical thermal minimum (used by program to determine depth selected when inactive and burrowing)
 TPREF<-31.3 # preferred body temperature (animal will attempt to regulate as close to this value as possible) (mean 31.9, range 29.4-34.3, Bennett, A.F. & John-Alder, H. (1986) Thermal Relations of Some Australian Skinks (Sauria: Scincidae). Copeia, 1986, 57-64.), mode in Pamula Fig. 3.14 around 33.5
 #Pwet from actual Ec ranges from 0.1 to 1.2 in my database
-skinwet<-0.29 # %, percentage of total surface area acting like a free water surface for evaporation 
 
 # behavioural traits
-dayact<-1 # diurnal activity allowed (1) or not (0)?
+dayact<-0 # diurnal activity allowed (1) or not (0)?
 nocturn<-1 # nocturnal activity allowed (1) or not (0)?
 crepus<-1 # crepuscular activity allowed (1) or not (0)?
 burrow<-1 # shelter in burrow allowed (1) or not (0)?
 shdburrow<-1 # choose if the animal's retreat is in the shade (1) or in the open (0)
 mindepth<-2 # minimum depth (soil node) to which animal can retreat if burrowing
-maxdepth<-10 # maximum depth (soil node) to which animal can retreat if burrowing
+maxdepth<-8 # maximum depth (soil node) to which animal can retreat if burrowing
 CkGrShad<-1 # shade seeking allowed (1) or not (0)?
 climb<-0 # climbing to seek cooler habitats allowed (1) or not (0)?
 
@@ -196,9 +291,9 @@ climb<-0 # climbing to seek cooler habitats allowed (1) or not (0)?
 # MR=MR1*M^MR2*10^(MR3*Tb) based on Eq. 2 from Andrews & Pough 1985. Physiol. Zool. 58:214-231
 ####amass<-masses[w] # g, mass of animal (used if the 'monthly' option is checked and DEB model is thus off)
 amass<-28.9 # g, mass of animal (used if the 'monthly' option is checked and DEB model is thus off)
-MR_1<-0.013
-MR_2<-0.8
-MR_3<-0.038
+MR_1<-exp(-4.686)
+MR_2<-1.113
+MR_3<-0.044
 
 #set up call to NicheMapR function
 setwd('../ectotherm/')
@@ -244,22 +339,73 @@ colnames(rainfall)<-c("dates","rainfall")
 library(lattice) # package used for 'xyplot'
 juldays<-c(15.,46.,74.,105.,135.,166.,196.,227.,258.,288.,319.,349.) # middle day of each month
 
-with(environ, plot(TC~dates,ylim=c(-20,70),type = "l"))
+# with(environ, plot(TC~dates,ylim=c(-20,70),type = "l",xlim=c(0,1)))
+# with(environ, points(ACT*5~dates,type = "l",col="orange"))
+# with(environ, points(SHADE/10~dates,type = "l",col="green"))
+# with(environ, points(DEP~dates,type = "l",col="brown"))
+# with(metout, points(TAREF~dates,type = "l",col="light blue"))
+# abline(TMAXPR,0,lty=2,col='red')
+# abline(TMINPR,0,lty=2,col='blue')
+# abline(TPREF,0,lty=2,col='green')
+# with(environ, plot(TC~dates,ylim=c(-20,70),type = "l",xlim=c(6,7)))
+# with(environ, points(ACT*5~dates,type = "l",col="orange"))
+# with(environ, points(SHADE/10~dates,type = "l",col="green"))
+# with(environ, points(DEP~dates,type = "l",col="brown"))
+# with(metout, points(TAREF~dates,type = "l",col="light blue"))
+# abline(TMAXPR,0,lty=2,col='red')
+# abline(TMINPR,0,lty=2,col='blue')
+# abline(TPREF,0,lty=2,col='green')
+# 
+# with(environ, plot(TC~dates,type = "l",ylim=c(-20,70)))
+# with(environ, points(ACT*5~dates,type = "l",col="orange"))
+# with(environ, points(SHADE/10~dates,type = "l",col="green"))
+# with(environ, points(DEP~dates,type = "l",col="brown"))
+# with(metout, points(TAREF~dates,type = "l",col="light blue"))
+# abline(TMAXPR,0,lty=2,col='red')
+# abline(TMINPR,0,lty=2,col='blue')
+# abline(TPREF,0,lty=2,col='green')
+# 
+# with(masbal,plot(H2OCut_g~dates,ylim=c(0,max(masbal$H2OCut_g)),xlim=c(0,1),type = "l",col="blue"))
+# with(masbal,points(H2OResp_g~dates,type = "l",col="red"))
+
+# forage<-subset(environ,ACT==2)
+# bask<-subset(environ,ACT==1)
+# night<-subset(metout,ZEN==90)
+# day<-subset(metout,ZEN!=90)
+# with(night,plot(TIME/60~JULDAY,pch=15,cex=2,col='dark blue'))
+# with(forage,points((TIME-1)~JULDAY,pch=15,cex=2,col='orange'))
+# with(bask,points((TIME-1)~JULDAY,pch=15,cex=2,col='light blue'))
+# 
+# 
+# environ2<-environ
+# environ2$ACT[environ2$ACT==2]<-1
+# sum(masbal$H2OEvap_g[which(masbal$JULDAY==15)])/amass/sum(environ2$ACT[which(environ2$JULDAY==15)])
+# sum(masbal$H2OResp_g[which(masbal$JULDAY==15)])/amass/sum(environ2$ACT[which(environ2$JULDAY==15)])
+# sum(masbal$H2OCut_g[which(masbal$JULDAY==15)])/amass/sum(environ2$ACT[which(environ2$JULDAY==15)])
+# sum(masbal$H2OEvap_g[which(masbal$JULDAY==15)])
+# sum(masbal$H2OResp_g[which(masbal$JULDAY==15)])
+# sum(masbal$H2OCut_g[which(masbal$JULDAY==15)])
+
+
+#with(masbal,plot((H2OEvap_g)~dates,ylim=c(0,0.05),xlim=c(ISOdatetime(2000,01,1,0,00,00),ISOdatetime(2000,01,07,12,59,00)),type = "n",col="blue"))
+if (s==1){
+  rect(xleft=dates[which(environ$ACT>=1)],xright=dates[which(environ$ACT>=1)+1],ybottom=0,ytop=0.2,col="yellow",border=NA,)
+}
+with(masbal,points((H2OEvap_g)~dates,type = "l",col=s_col[s]))
+
+
+ifelse(s==1,High<-sum(masbal$H2OEvap_g[which(masbal$JULDAY==15)])/amass,Low<-sum(masbal$H2OEvap_g[which(masbal$JULDAY==15)])/amass)
+
+}
+
+
+(High-Low)/High*100
+
+with(environ, plot(TC~dates,type = "l",xlim=c(0,1),ylim=c(-20,70)))
 with(environ, points(ACT*5~dates,type = "l",col="orange"))
-with(environ, points(SHADE/10~dates,type = "l",col="green"))
-with(environ, points(DEP/10~dates,type = "l",col="brown"))
+#with(environ, points(SHADE/10~dates,type = "l",col="green"))
+with(environ, points(DEP~dates,type = "l",col="brown"))
 #with(metout, points(TAREF~dates,type = "l",col="light blue"))
 abline(TMAXPR,0,lty=2,col='red')
 abline(TMINPR,0,lty=2,col='blue')
-
-with(masbal,plot(H2OCut_g~dates,ylim=c(0,max(masbal$H2OCut_g)),type = "l",col="blue"))
-with(masbal,points(H2OResp_g~dates,type = "l",col="red"))
-
-forage<-subset(environ,ACT==2)
-bask<-subset(environ,ACT==1)
-night<-subset(metout,ZEN==90)
-day<-subset(metout,ZEN!=90)
-with(night,plot(TIME/60~JULDAY,pch=15,cex=2,col='dark blue'))
-with(forage,points((TIME-1)~JULDAY,pch=15,cex=2,col='orange'))
-with(bask,points((TIME-1)~JULDAY,pch=15,cex=2,col='light blue'))
-
+#abline(TPREF,0,lty=2,col='green')
